@@ -8,35 +8,36 @@ Live: https://sam-t-g.github.io/injector-lab/
 
 ## What it does
 
-Enter thrust, mixture ratio, inlet pressure limits, propellant temperatures, hole counts and injector geometry. The tool either searches chamber pressure, L* and injector pressure drop, or evaluates one point you give it. It returns:
+Enter thrust, chamber pressure, mixture ratio, inlet pressure limits, propellant temperatures, hole counts and injector geometry, or the dimensions of hardware you already have. It returns:
 
 - engine size (chamber and throat diameters, chamber length, mass flow)
 - hole diameters, nearest drill sizes, jet velocities, discharge coefficients, feed pressures
-- drop sizes, vaporization and mixing for three cases (pessimistic, nominal, optimistic)
-- c* efficiency and delivered Isp as a range
-- a 3D drawing with the spray envelopes, a cross-section mixture-ratio map, and a map of the search
+- jet breakup, drop sizes, vaporization and mixing, swept over the inputs nobody has measured yet
+- c* efficiency and delivered Isp as a range, and how both change along the chamber
+- the built engine's pressure, thrust and O/F across that range
+- a 3D drawing with liquid cores and vapor spread, and a cross-section mixture-ratio map
 
-## Model
+## Models
 
-The current model is `v0.4-port`, a TypeScript reimplementation of a Python tool (v0.4) from its author's written description. It reproduces that tool's default case to the reported precision; see [docs/port-notes.md](docs/port-notes.md) for the parity table and every assumption the port had to make.
-
-The v0.4 model has known problems, listed in [docs/review/](docs/review/). The app shows them next to each result. A revised model built from the reviews is next.
+- **v0.5** (default) is rebuilt from four reviews in [docs/review/](docs/review/): chamber pressure as an input, sizing at a design efficiency, Priem's droplet vaporization march, turbulent vapor mixing with a zero-flux wall, an uncertainty sweep shown as a band, a chug screen, a wall-zone check, Bartz throat heat flux, and an Analyze mode for given hardware. What changed and why: [docs/model-v0.5.md](docs/model-v0.5.md).
+- **v0.4** is a TypeScript reimplementation of the original Python tool from its author's written description. It reproduces that tool's default case to the reported precision and stays in the app for comparison; see [docs/port-notes.md](docs/port-notes.md).
 
 Data:
 
 - Combustion: NASA CEA (python package `cea` 3.3.4), equilibrium, infinite-area combustor, expanded to 1.01325 bar. Tables in `src/data/`, built by `tools/build_cea_tables.py`.
 - Liquids: CoolProp 8.0.0, saturated liquid. Built by `tools/build_props.py`.
+- Droplet film gas: CEA equilibrium products with frozen transport properties, and vapor heat capacities. Built by `tools/build_film.py`.
 
 ## Layout
 
 ```
-src/physics/   pure model code, no DOM; the JSON contract is in types.ts
+src/physics/   pure model code, no DOM; v0.4 at the top level, v0.5 in v05/
 src/render/    Three.js drawing
 src/ui/        form, results, maps
 src/worker.ts  runs the search off the main thread
 tools/         Python scripts that build the data tables
 tests/         Vitest suite, including the v0.4 parity test
-docs/          port notes and the review set
+docs/          model notes, port notes, open questions and the review set
 ```
 
 ## Run it
@@ -55,4 +56,5 @@ Rebuild the data tables:
 python3 -m venv .venv && .venv/bin/pip install -r tools/requirements.txt
 .venv/bin/python -I tools/build_cea_tables.py
 .venv/bin/python -I tools/build_props.py
+.venv/bin/python -I tools/build_film.py
 ```

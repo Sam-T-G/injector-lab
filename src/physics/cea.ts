@@ -2,8 +2,9 @@ import table from '../data/cea-lox-ethanol.json'
 import { bracket } from './interp'
 import type { Combustion } from './types'
 
-export type CeaField = 'cstar' | 'Tc' | 'MW' | 'gamma' | 'rho' | 'IspSL' | 'IspVac' | 'eps' | 'cp' | 'mu'
-const FIELDS: CeaField[] = ['cstar', 'Tc', 'MW', 'gamma', 'rho', 'IspSL', 'IspVac', 'eps', 'cp', 'mu']
+export type CeaField = 'cstar' | 'Tc' | 'MW' | 'gamma' | 'rho' | 'IspSL' | 'IspVac' | 'eps' | 'cp' | 'mu' | 'kfr' | 'cpfr' | 'Prfr'
+// Fields copied into a Combustion record; transport extras are read with ceaField.
+const FIELDS = ['cstar', 'Tc', 'MW', 'gamma', 'rho', 'IspSL', 'IspVac', 'eps', 'cp', 'mu'] as const
 
 export interface CeaTable {
   pair: string

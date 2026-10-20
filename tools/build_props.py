@@ -11,8 +11,11 @@ import CoolProp
 import CoolProp.CoolProp as CP
 
 FLUIDS = {
-    "lox": {"coolprop": "Oxygen", "label": "Liquid oxygen", "T": np.arange(60.0, 150.0 + 1e-9, 2.0)},
-    "ethanol": {"coolprop": "Ethanol", "label": "Ethanol (100%)", "T": np.arange(170.0, 500.0 + 1e-9, 5.0)},
+    # Dense steps near the critical point, where the droplet march needs sigma and h_fg going to zero.
+    "lox": {"coolprop": "Oxygen", "label": "Liquid oxygen",
+            "T": np.concatenate([np.arange(60.0, 150.0, 2.0), np.arange(150.0, 154.0 + 1e-9, 0.5)])},
+    "ethanol": {"coolprop": "Ethanol", "label": "Ethanol (100%)",
+                "T": np.concatenate([np.arange(170.0, 500.0, 5.0), np.arange(500.0, 512.0 + 1e-9, 1.0)])},
 }
 
 

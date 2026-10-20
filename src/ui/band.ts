@@ -48,8 +48,17 @@ export class EfficiencyBand {
     this.el = svg
   }
 
-  set(v: BandValues): void {
-    this.el.setAttribute('aria-label', `c* efficiency ${fix(100 * v.pess)}% to ${fix(100 * v.opt)}%, nominal ${fix(100 * v.nom)}%`)
+  private rangeOnly = false
+
+  /** rangeOnly hides the nominal tick: the model cannot pick a value inside the band. */
+  set(v: BandValues, rangeOnly = false): void {
+    this.rangeOnly = rangeOnly
+    this.tick.style.display = rangeOnly ? 'none' : ''
+    this.nomLabel.style.display = rangeOnly ? 'none' : ''
+    this.el.setAttribute(
+      'aria-label',
+      rangeOnly ? `c* efficiency ${fix(100 * v.pess)}% to ${fix(100 * v.opt)}%` : `c* efficiency ${fix(100 * v.pess)}% to ${fix(100 * v.opt)}%, nominal ${fix(100 * v.nom)}%`,
+    )
     const from = { ...this.cur }
     this.cur = v
     if (this.reduce.matches) return this.draw(v)

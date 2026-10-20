@@ -2,9 +2,27 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { animate, frame } from 'motion'
-import { spraySigma, type PointResult, type Scenario } from '../physics'
 
 export type ViewPreset = 'three-quarter' | 'side' | 'nozzle'
+
+/** Everything the drawing needs, in metres; either model fills it. */
+export interface DrawingSpec {
+  Dc: number
+  Dt: number
+  eps: number
+  Lc: number
+  convergentDeg: number
+  bodyThicknessMm: number
+  bodyMarginMm: number
+  rings: { prop: 'ox' | 'fuel'; ringRadius: number; clockDeg: number; holes: number; d: number }[]
+  /** Intact liquid-core length per propellant, m (v0.5); omitted draws no cores. */
+  cores?: { ox: number | null; fuel: number | null }
+}
+
+/** Axial sample positions of the spray tubes for a chamber of length Lc (m), in m. */
+export function sprayStations(Lc: number): Float64Array {
+  return Float64Array.from({ length: 64 }, (_, i) => (i / 63) * Lc)
+}
 
 const AXIAL = 64 // samples along each spray
 const SEG = 28 // segments around each spray
@@ -81,7 +99,7 @@ export class InjectorView {
   private sprayR: { ox: Float32Array; fuel: Float32Array } | null = null
   private section: THREE.Mesh | null = null
   private sectionTex: THREE.DataTexture | null = null
-  private result: PointResult | null = null
+  private spec: DrawingSpec | null = null
   private size = { len: 300, rBody: 40, xMid: 150 }
   private pending = false
   private reduce = matchMedia('(prefers-reduced-motion: reduce)')
@@ -164,21 +182,20 @@ export class InjectorView {
     this.sectionTex = null
   }
 
-  /** Rebuild the drawing for a new result; the sprays show the given case. */
-  setResult(r: PointResult, s: Scenario, geom: { thicknessMm: number; bodyMarginMm: number }): void {
+  /** Rebuild the static drawing; call setSprays afterwards. */
+  setGeometry(spec: DrawingSpec): void {
     if (!this.ok) return
-    const first = this.result === null
+    const first = this.spec === null
     this.clear()
-    this.result = r
+    this.spec = spec
     const mm = 1000
-    const e = r.engine
-    const Rc = (e.Dc / 2) * mm
-    const Rt = (e.Dt / 2) * mm
-    const Re = Rt * Math.sqrt(Math.max(1, e.comb.eps))
-    const Lc = e.Lc * mm
-    const body = Rc + geom.bodyMarginMm
-    const bodyT = geom.thicknessMm
-    const conv = (Rc - Rt) / Math.tan((30 * Math.PI) / 180)
+    const Rc = (spec.Dc / 2) * mm
+    const Rt = (spec.Dt / 2) * mm
+    const Re = Rt * Math.sqrt(Math.max(1, spec.eps))
+    const Lc = spec.Lc * mm
+    const body = Rc + spec.bodyMarginMm
+    const bodyT = spec.bodyThicknessMm
+    const conv = (Rc - Rt) / Math.tan((spec.convergentDeg * Math.PI) / 180)
     const div = (Re - Rt) / Math.tan((15 * Math.PI) / 180)
     const len = Lc + conv + div
     this.size = { len, rBody: body, xMid: (len - bodyT) / 2 }
@@ -194,8 +211,8 @@ export class InjectorView {
     this.engine.add(bodyEdges)
 
     // Holes, true size, with a colored ring so the two propellants read apart.
-    for (const side of [r.ox, r.fuel]) {
-      const d = side.hole.d * mm
+    for (const side of spec.rings) {
+      const d = side.d * mm
       const color = css(side.prop === 'ox' ? '--lox' : '--fuel')
       const holeMat = new THREE.MeshBasicMaterial({ color: ink })
       const ringMat = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
@@ -259,9 +276,25 @@ export class InjectorView {
 
     this.engine.add(this.dims)
 
+    // Liquid cores (v0.5): opaque columns of the hole diameter, cut at the chamber end.
+    if (spec.cores) {
+      for (const side of spec.rings) {
+        const core = spec.cores[side.prop]
+        const len = Math.min(Lc, core === null ? Lc : core * mm)
+        const geo = new THREE.CylinderGeometry((side.d * mm) / 2, (side.d * mm) / 2, len, 10)
+        const mat = new THREE.MeshBasicMaterial({ color: css(side.prop === 'ox' ? '--lox' : '--fuel') })
+        for (let k = 0; k < side.holes; k++) {
+          const a = ((side.clockDeg + (360 * k) / side.holes) * Math.PI) / 180
+          const m = new THREE.Mesh(geo, mat)
+          m.position.set(side.ringRadius * mm * Math.cos(a), len / 2, -side.ringRadius * mm * Math.sin(a))
+          this.dynamic.add(m)
+        }
+      }
+    }
+
     // Sprays and section plane.
     this.sprays = { ox: new SprayTube(Lc), fuel: new SprayTube(Lc) }
-    for (const side of [r.ox, r.fuel]) {
+    for (const side of spec.rings) {
       const tube = this.sprays[side.prop]
       const mat = new THREE.MeshBasicMaterial({
         color: css(side.prop === 'ox' ? '--lox' : '--fuel'),
@@ -279,28 +312,16 @@ export class InjectorView {
       }
     }
     this.sprayR = null
-    this.setScenario(s, false)
+    this.section = null
     this.engine.add(this.dynamic)
     if (first) this.view('three-quarter', false)
     this.requestRender()
   }
 
-  private radii(s: Scenario): { ox: Float32Array; fuel: Float32Array } {
-    const r = this.result!
-    const sc = r.scenarios[s]!
-    const out = { ox: new Float32Array(AXIAL), fuel: new Float32Array(AXIAL) }
-    for (const side of [r.ox, r.fuel]) {
-      const p = sc[side.prop]
-      const ys = this.sprays![side.prop].axial
-      for (let i = 0; i < AXIAL; i++) out[side.prop][i] = 2 * spraySigma(ys[i]! / 1000, side.hole.d, p.drop.tanHalfAngle, p.xv) * 1000
-    }
-    return out
-  }
-
-  /** Change which case the spray envelopes show; tweens the radii. */
-  setScenario(s: Scenario, tween = true): void {
-    if (!this.ok || !this.result || !this.sprays) return
-    const to = this.radii(s)
+  /** Spray envelope radii (m) at sprayStations(Lc), per propellant; tweens from the last set. */
+  setSprays(r: { ox: ArrayLike<number>; fuel: ArrayLike<number> }, tween = true): void {
+    if (!this.ok || !this.sprays) return
+    const to = { ox: Float32Array.from(r.ox, (v) => v * 1000), fuel: Float32Array.from(r.fuel, (v) => v * 1000) }
     const from = this.sprayR
     const apply = (u: number) => {
       for (const k of ['ox', 'fuel'] as const) {
@@ -317,8 +338,8 @@ export class InjectorView {
 
   /** Place the section plane at x mm from the face, colored by the given RGBA field (n x n). */
   setSection(xMm: number, px: Uint8ClampedArray, n: number): void {
-    if (!this.ok || !this.result) return
-    const Rc = (this.result.engine.Dc / 2) * 1000
+    if (!this.ok || !this.spec) return
+    const Rc = (this.spec.Dc / 2) * 1000
     if (!this.section) {
       this.section = new THREE.Mesh(
         new THREE.CircleGeometry(Rc, 96),

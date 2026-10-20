@@ -1,6 +1,5 @@
-import type { DesignPoint, PointResult, SearchResult } from '../physics'
-import type { FluxField } from '../physics/mixing'
-import { fieldPixels, RAMP_CSS } from './section'
+import type { DesignPoint, SearchResult } from '../physics'
+import { fieldPixels, RAMP_CSS, type SectionField } from './section'
 import { esc, fix, G0 } from './format'
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -39,8 +38,8 @@ function tooltip(host: HTMLElement): { show(x: number, y: number, html: string):
 export class SectionMap {
   private canvas = document.createElement('canvas')
   private off = document.createElement('canvas')
-  private field: FluxField | null = null
-  private result: PointResult | null = null
+  private field: SectionField | null = null
+  private holes: { prop: 'ox' | 'fuel'; x: number; y: number }[] = []
   private tip: ReturnType<typeof tooltip>
   private size = 0
 
@@ -52,17 +51,16 @@ export class SectionMap {
     this.canvas.addEventListener('pointerleave', () => this.tip.hide())
   }
 
-  set(field: FluxField, r: PointResult): void {
+  set(field: SectionField, holes: { prop: 'ox' | 'fuel'; x: number; y: number }[], of: number): void {
     this.field = field
-    this.result = r
-    const px = fieldPixels(field, r.engine.comb.of)
+    this.holes = holes
+    const px = fieldPixels(field, of)
     this.off.width = field.n
     this.off.height = field.n
     const img = new ImageData(field.n, field.n)
     // Field rows run with y upward; canvas rows run downward.
     for (let j = 0; j < field.n; j++) img.data.set(px.subarray(j * field.n * 4, (j + 1) * field.n * 4), (field.n - 1 - j) * field.n * 4)
     this.off.getContext('2d')!.putImageData(img, 0, 0)
-    const of = r.engine.comb.of
     this.legend.innerHTML = `<div class="ramp" style="background:${RAMP_CSS}"></div>
       <div class="ramp-ticks"><span>${fix(of / 4, 2)}</span><span>${fix(of / 2, 2)}</span><span>${fix(of, 2)}</span><span>${fix(of * 2, 2)}</span><span>${fix(of * 4, 2)}</span></div>
       <div class="ramp-ends"><span>Fuel-rich</span><span>Design O/F</span><span>Oxidizer-rich</span></div>
@@ -72,7 +70,7 @@ export class SectionMap {
 
   private draw(): void {
     const w = Math.min(this.host.clientWidth, 420)
-    if (!w || !this.field || !this.result) return
+    if (!w || !this.field) return
     this.size = w
     const ctx = fitCanvas(this.canvas, w, w)
     const c = w / 2
@@ -93,19 +91,14 @@ export class SectionMap {
     ctx.lineWidth = 1.5
     ctx.stroke()
     const R = this.field.R
-    for (const side of [this.result.ox, this.result.fuel]) {
-      ctx.strokeStyle = css('--ink')
-      ctx.fillStyle = css(side.prop === 'ox' ? '--lox' : '--fuel')
-      for (let k = 0; k < side.holes; k++) {
-        const a = ((side.clockDeg + (360 * k) / side.holes) * Math.PI) / 180
-        const x = c + (side.ringRadius / R) * rad * Math.cos(a)
-        const y = c - (side.ringRadius / R) * rad * Math.sin(a)
-        ctx.beginPath()
-        ctx.arc(x, y, 3, 0, 2 * Math.PI)
-        ctx.fill()
-        ctx.lineWidth = 1
-        ctx.stroke()
-      }
+    ctx.strokeStyle = css('--ink')
+    ctx.lineWidth = 1
+    for (const h of this.holes) {
+      ctx.fillStyle = css(h.prop === 'ox' ? '--lox' : '--fuel')
+      ctx.beginPath()
+      ctx.arc(c + (h.x / R) * rad, c - (h.y / R) * rad, 3, 0, 2 * Math.PI)
+      ctx.fill()
+      ctx.stroke()
     }
   }
 

@@ -1,15 +1,16 @@
-import { DEFAULT_INPUTS, type DesignInputs, type DesignPoint } from './physics'
+import type { DesignPoint } from './physics'
+import { DEFAULT_INPUTS05, type Inputs05 } from './physics/v05/types'
 
 export type Mode = 'search' | 'point'
 
 export interface AppState {
-  inputs: DesignInputs
+  inputs: Inputs05
   mode: Mode
   point: DesignPoint
 }
 
 export const DEFAULT_STATE: AppState = {
-  inputs: DEFAULT_INPUTS,
+  inputs: DEFAULT_INPUTS05,
   mode: 'search',
   point: { pcBar: 27.5, lStarM: 1.25, dpFrac: 0.15 },
 }
@@ -66,7 +67,9 @@ function mergeKnown<T>(base: T, patch: unknown): T {
     if (!(k in out)) continue
     const cur = out[k]
     if (cur && typeof cur === 'object' && !Array.isArray(cur)) out[k] = mergeKnown(cur, v)
-    else if (typeof v === typeof cur && (typeof v !== 'number' || Number.isFinite(v))) out[k] = v
+    else if (Array.isArray(cur)) {
+      if (Array.isArray(v) && v.length && v.every((x) => typeof x === 'number' && Number.isFinite(x))) out[k] = v
+    } else if (typeof v === typeof cur && (typeof v !== 'number' || Number.isFinite(v))) out[k] = v
   }
   return out as T
 }

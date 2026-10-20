@@ -22,12 +22,14 @@ PAIRS = {
 
 PC_BAR = np.arange(5.0, 60.0 + 1e-9, 2.5)
 OF = np.unique(np.round(np.concatenate([
+    [0.02, 0.03, 0.05, 0.075],
     np.arange(0.10, 0.30, 0.05),
     np.arange(0.30, 4.00 + 1e-9, 0.05),
     np.arange(4.25, 10.0 + 1e-9, 0.25),
+    [11, 12.5, 15, 17.5, 20, 25, 30, 40, 50],
 ]), 4))
 
-FIELDS = ["cstar", "Tc", "MW", "gamma", "rho", "IspSL", "IspVac", "eps", "cp", "mu"]
+FIELDS = ["cstar", "Tc", "MW", "gamma", "rho", "IspSL", "IspVac", "eps", "cp", "mu", "kfr", "cpfr", "Prfr"]
 
 
 def solve_pair(fuel, ox):
@@ -58,6 +60,9 @@ def solve_pair(fuel, ox):
             out["eps"][i, j] = sol.ae_at[2]
             out["cp"][i, j] = sol.cp_eq[0] * 1000.0  # kJ/kg-K -> J/kg-K
             out["mu"][i, j] = sol.viscosity[0] * 1e-4  # millipoise -> Pa s
+            out["kfr"][i, j] = sol.conductivity_fr[0] * 0.1  # mW/(cm K) -> W/(m K)
+            out["cpfr"][i, j] = sol.cp_fr[0] * 1000.0
+            out["Prfr"][i, j] = sol.Pr_fr[0]
     return out, failed
 
 
@@ -79,7 +84,7 @@ def main():
             "ox": {"name": pair["ox"][0], "T_K": pair["ox"][1]},
             "units": {"Pc": "bar", "cstar": "m/s", "Tc": "K", "MW": "kg/kmol", "gamma": "-",
                       "rho": "kg/m^3", "IspSL": "m/s", "IspVac": "m/s", "eps": "-",
-                      "cp": "J/kg/K", "mu": "Pa s"},
+                      "cp": "J/kg/K", "mu": "Pa s", "kfr": "W/m/K", "cpfr": "J/kg/K", "Prfr": "-"},
             "Pc": PC_BAR.round(4).tolist(),
             "OF": OF.tolist(),
             "fields": {k: [[None if np.isnan(v) else round(float(v), 6) for v in row]

@@ -46,15 +46,36 @@ export function ofColor(of: number, ofDesign: number): [number, number, number] 
 
 export const RAMP_CSS = `linear-gradient(90deg, ${RAMP.map((c) => `rgb(${c.join(',')})`).join(', ')})`
 
+/** A propellant flux field on an n x n grid over the chamber section; cells outside the wall are zero. */
+export interface SectionField {
+  n: number
+  R: number
+  ox: ArrayLike<number>
+  fuel: ArrayLike<number>
+}
+
+export function insideMask(n: number, R: number): Uint8Array {
+  const m = new Uint8Array(n * n)
+  const h = (2 * R) / n
+  for (let j = 0; j < n; j++)
+    for (let i = 0; i < n; i++) {
+      const x = -R + (i + 0.5) * h
+      const y = -R + (j + 0.5) * h
+      if (x * x + y * y <= R * R) m[j * n + i] = 1
+    }
+  return m
+}
+
 /** RGBA pixels for the field: color by O/F, opacity by total flux against the 98th percentile. */
-export function fieldPixels(f: FluxField, ofDesign: number): Uint8ClampedArray {
+export function fieldPixels(f: SectionField, ofDesign: number): Uint8ClampedArray {
+  const inside = 'inside' in f ? (f as FluxField).inside : insideMask(f.n, f.R)
   const px = new Uint8ClampedArray(f.n * f.n * 4)
   const totals: number[] = []
-  for (let k = 0; k < f.ox.length; k++) if (f.inside[k]) totals.push(f.ox[k]! + f.fuel[k]!)
+  for (let k = 0; k < f.ox.length; k++) if (inside[k]) totals.push(f.ox[k]! + f.fuel[k]!)
   totals.sort((a, b) => a - b)
   const ref = totals[Math.floor(0.98 * (totals.length - 1))] || 1
   for (let k = 0; k < f.ox.length; k++) {
-    if (!f.inside[k]) continue
+    if (!inside[k]) continue
     const fo = f.ox[k]!
     const ff = f.fuel[k]!
     const [r, g, b] = ofColor(ff > 0 ? fo / ff : Infinity, ofDesign)

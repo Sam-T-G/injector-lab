@@ -25,3 +25,41 @@ Built from the four reviews in `docs/review/`. Each line names the review sectio
 ## Not modeled
 
 Ignition (C M10: start requirements listed only), combustion instability beyond the chug screen, heat transfer to the injector, structure, manifold flow split, LOX boiling in a warm manifold.
+
+## Verification so far
+
+Tests in `tests/v05.test.ts`:
+
+| Check | Source | Result |
+|---|---|---|
+| Five drop groups reproduce Priem's 25/48/75/120/225 µm | B S3, TN 3883 | within 4% |
+| Property factor near 1 for n-heptane, the calibration fluid | B S3, Fang Eq 2 | 1.02 |
+| Core length of the v0.4 LOX jet inside review B's 221-328 mm | B item 1 | 283 mm |
+| d²-law reproduced in the boiling limit with no slip | B S7 | exact (1e-6) |
+| LOX vaporized in 250 mm, TN 3883 oxygen curve as read by review B | B item 4 | 99.9 / 97.8 / 89.6% against about 99 / 96 / 85% for 79 / 110 / 200 µm |
+| Mass closes in every mixing run | C M9 | below 1e-9 (about 1e-14) |
+| E_m stays in 0-1 and rises with turbulence | C M6 | yes |
+| Chug-screen ratios at ΔP/Pc 0.15-0.40 | A S9 table | 0.59 / 0.87 / 1.21 / 1.66 / 3.33 |
+| Face-pressure rise at CR 5 and 3 | A S6 | 1.6% and 4.8% |
+| Sized hardware at the design efficiency runs at the design Pc, thrust, O/F | A S6, S7 | within 0.5% |
+
+| Mixing grid: 64 against 200 cells across the chamber, default case | review of the code, C M4 | band edges within 0.6 points; chosen length within 10 mm (2%) at a 30% target |
+| Built engine at the design point when the pressure-drop cap binds | review of the code | within 0.5% |
+| Vapor composition equals the vaporized-fuel ratio | C M9 | below 1e-9 |
+
+Not yet done: the TN 3883 S8 case (300 psia, 243.8 m/s) against the digitized oxygen curve, the R-67 generalized-length cross-check, any comparison with hot-fire data (review A section 2.4 lists seven datasets).
+
+## Known limits of the implementation
+
+- The mixing grid is 64 cells across the chamber for the sweep, coarser than review C's h ≤ R_c/100, chosen for speed after the grid check above.
+- κ(x) counts x from the face (C M4 as written). Vapor released far downstream gets the full eddy diffusivity at once; a Lagrangian picture would ramp from its release point. For the larger mixing length this likely makes the upper edge of the band optimistic.
+- Drop sizes come from a by-eye fit to Fang 1983 Fig 27 (±20%) until the figure is digitized.
+- Film transport properties are those of the combustion products; the vapor enters only through its molar mass and heat capacity.
+
+## Default case (1700 N, 27.5 bar, O/F 1.70, 35 bar inlets)
+
+- Sized for 85%: throat 23.42 mm, chamber 52.37 mm, mass flow 0.812 kg/s, holes 12 × 1.384 mm LOX and 12 × 1.183 mm ethanol, pressure drop 24% of Pc on both sides (the whole feed budget).
+- c* efficiency band at L* 3.0 m: 32% to 99%. The low edge never reaches 80%, so the tool reports the longest chamber. Largest effects: turbulence intensity, then mixing length, then drop size.
+- Ethanol limits vaporization: 78% vaporized at 250 mm, 90% at 586 mm. LOX is fully vaporized by about 230 mm.
+- With LOX on the outer ring the wall sees oxidizer-rich vapor (O/F 4 to 150). Swapping the rings gives a fuel-rich wall (O/F 0.1 to 1.0) at no efficiency cost in this model.
+- The CAD holes (#54, #56) in the v0.4 chamber run near 27.9 bar and O/F 1.74. The LOX cores outlast the 250 mm chamber and the chug screen fails (critical delay 1.61 ms against 1.7 ms for half the ethanol to vaporize).

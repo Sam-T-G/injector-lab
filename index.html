@@ -29,7 +29,7 @@
       <section class="drawing" aria-labelledby="h-drawing">
         <h2 id="h-drawing" class="sr">Drawing</h2>
         <div class="view-bar">
-          <fieldset class="seg" id="scenario">
+          <fieldset class="seg" id="scenario" hidden>
             <legend>Case</legend>
             <label><input type="radio" name="scenario" value="pessimistic" /><span>Pessimistic</span></label>
             <label><input type="radio" name="scenario" value="nominal" checked /><span>Nominal</span></label>
@@ -42,19 +42,20 @@
           </div>
         </div>
         <div id="view" class="view"></div>
-        <ul class="view-legend">
-          <li><i class="swatch lox"></i>LOX spray edge (2σ)</li>
-          <li><i class="swatch fuel"></i>Ethanol spray edge (2σ)</li>
-          <li>Conical nozzle sketch, 30° in and 15° out. Dimensions in mm.</li>
-        </ul>
+        <ul class="view-legend" id="view-legend"></ul>
         <div class="station">
           <label for="station">Section plane</label>
           <input type="range" id="station" min="0" max="250" step="1" value="250" />
           <output id="station-out" for="station">250 mm from the face</output>
         </div>
+        <figure class="map" id="length-fig" hidden>
+          <figcaption>c* efficiency along the chamber</figcaption>
+          <div id="length-chart"></div>
+          <div id="length-legend" class="legend"></div>
+        </figure>
         <div class="maps">
           <figure class="map">
-            <figcaption>Mixture ratio at the section plane, seen from the nozzle end</figcaption>
+            <figcaption id="section-caption">Mixture ratio at the section plane, seen from the nozzle end</figcaption>
             <div id="section-map" class="canvas-host"></div>
             <div id="section-legend" class="legend"></div>
           </figure>

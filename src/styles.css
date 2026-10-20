@@ -745,3 +745,122 @@ table.data {
   padding: 0 8px;
   cursor: pointer;
 }
+
+/* Efficiency along the chamber */
+.lchart {
+  display: block;
+  font-family: var(--font-ui);
+}
+.lchart .grid {
+  stroke: var(--wash);
+}
+.lchart .axis {
+  font-size: 12px;
+  fill: var(--ink-2);
+}
+.lchart .band-area {
+  fill: var(--ink-3);
+  opacity: 0.22;
+}
+.lchart .line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.lchart .line.edge {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+.lchart .line.central {
+  stroke: var(--ink);
+  stroke-dasharray: 5 4;
+}
+.lchart .line.lox {
+  stroke: var(--lox);
+}
+.lchart .line.fuel {
+  stroke: var(--fuel);
+}
+.lchart .target {
+  stroke: var(--stop);
+  stroke-dasharray: 2 3;
+}
+.lchart .chosen {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.lchart .cross {
+  stroke: var(--ink-2);
+}
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.key {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  margin-right: 6px;
+  vertical-align: 0;
+}
+.key.band {
+  background: rgb(116 130 139 / 0.3);
+  border-top: 1px solid var(--ink-3);
+  border-bottom: 1px solid var(--ink-3);
+}
+.key.central {
+  height: 0;
+  border-top: 2px dashed var(--ink);
+  vertical-align: 3px;
+}
+.key.lox {
+  height: 0;
+  border-top: 2px solid var(--lox);
+  vertical-align: 3px;
+}
+.key.fuel {
+  height: 0;
+  border-top: 2px solid var(--fuel);
+  vertical-align: 3px;
+}
+.key.target {
+  height: 0;
+  border-top: 2px dotted var(--stop);
+  vertical-align: 3px;
+}
+.outcome {
+  font-family: var(--font-head);
+  font-size: 17px;
+  font-weight: 500;
+}
+.range-note {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.plain {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.data.op td,
+.data.op thead th {
+  text-align: right;
+}
+.data.op thead th:first-child,
+.data.op td:first-child {
+  text-align: left;
+}
+.lchart .near {
+  fill: var(--wash);
+}
+.key.near {
+  background: var(--wash);
+  border: 1px solid var(--rule);
+}
